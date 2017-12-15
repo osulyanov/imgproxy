@@ -197,12 +197,5 @@ func (h *httpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	t.Check()
 
-	b, err = processImage(b, imgtype, procOpt, t)
-	if err != nil {
-		panic(newError(500, err.Error(), "Error occurred while processing image"))
-	}
-
-	t.Check()
-
 	respondWithImage(r, rw, b, imgURL, procOpt, t.Since())
 }

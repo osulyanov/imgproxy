@@ -1,25 +1,42 @@
 require "openssl"
 require "base64"
 
-key = ["943b421c9eb07c830af81030552c86009268de4e532ba2ee2eab8247c6da0881"].pack("H*")
-salt = ["520f986b998545b4785e0defbc4f3c1203f22de2374a3d53cb7a7fe9fea309c5"].pack("H*")
+public_key = [ENV['IMGPROXY_PUBLIC_KEY']].pack("H*")
+puts "public_key=#{public_key}"
 
-url = "http://img.example.com/pretty/image.jpg"
+secret_key = [ENV['IMGPROXY_SECRET_KEY']].pack("H*")
+puts "secret_key=#{secret_key}"
 
-# You can trim padding spaces to get good-looking url
-encoded_url = Base64.urlsafe_encode64(url).tr("=", "").scan(/.{1,16}/).join("/")
+salt = [ENV['IMGPROXY_SALT']].pack("H*")
+puts "salt=#{salt}"
 
-resize = "fill"
-width = 300
-height = 300
-gravity = "no"
-enlarge = 1
-extension = "png"
 
-path = "/#{resize}/#{width}/#{height}/#{gravity}/#{enlarge}/#{encoded_url}.#{extension}"
+base_url = ARGV[0] # https://domain.com/tile/client_id
+puts "base_url=#{base_url}"
+
+tile_path = ARGV[1] # /0/0/0.png
+puts "tile_path=#{tile_path}"
 
 digest = OpenSSL::Digest.new("sha256")
-# You can trim padding spaces to get good-looking url
-hmac = Base64.urlsafe_encode64(OpenSSL::HMAC.digest(digest, key, "#{salt}#{path}")).tr("=", "")
+signed_base_url = Base64.urlsafe_encode64(OpenSSL::HMAC.digest(digest, secret_key, "#{salt}#{base_url}")).tr("=", "")
+puts "signed_base_url=#{signed_base_url}"
 
-signed_path = "/#{hmac}#{path}"
+
+url = "#{signed_base_url}#{tile_path}"
+puts "url=#{url}"
+
+
+encoded_url = Base64.urlsafe_encode64(url).tr("=", "").scan(/.{1,16}/).join("/")
+puts "encoded_url=#{encoded_url}"
+
+
+extension = "png"
+
+path = "/---/#{encoded_url}.#{extension}"
+puts "path=#{path}"
+
+
+hmac = Base64.urlsafe_encode64(OpenSSL::HMAC.digest(digest, public_key, "#{salt}#{path}")).tr("=", "")
+
+puts "final full path:"
+puts "/#{hmac}#{path}"

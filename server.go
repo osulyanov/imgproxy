@@ -35,7 +35,7 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 	path := r.URL.Path
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 
-	if len(parts) < 7 {
+	if len(parts) < 3 {
 		return "", po, errors.New("Invalid path")
 	}
 
@@ -45,27 +45,27 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 		return "", po, err
 	}
 
-	if r, ok := resizeTypes[parts[1]]; ok {
-		po.resize = r
-	} else {
-		return "", po, fmt.Errorf("Invalid resize type: %s", parts[1])
-	}
-
-	if po.width, err = strconv.Atoi(parts[2]); err != nil {
-		return "", po, fmt.Errorf("Invalid width: %s", parts[2])
-	}
-
-	if po.height, err = strconv.Atoi(parts[3]); err != nil {
-		return "", po, fmt.Errorf("Invalid height: %s", parts[3])
-	}
-
-	if g, ok := gravityTypes[parts[4]]; ok {
-		po.gravity = g
-	} else {
-		return "", po, fmt.Errorf("Invalid gravity: %s", parts[4])
-	}
-
-	po.enlarge = parts[5] != "0"
+	//if r, ok := resizeTypes[parts[1]]; ok {
+	//	po.resize = r
+	//} else {
+	//	return "", po, fmt.Errorf("Invalid resize type: %s", parts[1])
+	//}
+	//
+	//if po.width, err = strconv.Atoi(parts[2]); err != nil {
+	//	return "", po, fmt.Errorf("Invalid width: %s", parts[2])
+	//}
+	//
+	//if po.height, err = strconv.Atoi(parts[3]); err != nil {
+	//	return "", po, fmt.Errorf("Invalid height: %s", parts[3])
+	//}
+	//
+	//if g, ok := gravityTypes[parts[4]]; ok {
+	//	po.gravity = g
+	//} else {
+	//	return "", po, fmt.Errorf("Invalid gravity: %s", parts[4])
+	//}
+	//
+	//po.enlarge = parts[5] != "0"
 
 	filenameParts := strings.Split(strings.Join(parts[6:], ""), ".")
 

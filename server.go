@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -39,33 +38,11 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 		return "", po, errors.New("Invalid path")
 	}
 
-	token := parts[0]
+	publicToken := parts[0]
 
-	if err = validatePath(token, strings.TrimPrefix(path, fmt.Sprintf("/%s", token))); err != nil {
+	if err = validatePath(publicToken, strings.TrimPrefix(path, fmt.Sprintf("/%s", publicToken))); err != nil {
 		return "", po, err
 	}
-
-	//if r, ok := resizeTypes[parts[1]]; ok {
-	//	po.resize = r
-	//} else {
-	//	return "", po, fmt.Errorf("Invalid resize type: %s", parts[1])
-	//}
-	//
-	//if po.width, err = strconv.Atoi(parts[2]); err != nil {
-	//	return "", po, fmt.Errorf("Invalid width: %s", parts[2])
-	//}
-	//
-	//if po.height, err = strconv.Atoi(parts[3]); err != nil {
-	//	return "", po, fmt.Errorf("Invalid height: %s", parts[3])
-	//}
-	//
-	//if g, ok := gravityTypes[parts[4]]; ok {
-	//	po.gravity = g
-	//} else {
-	//	return "", po, fmt.Errorf("Invalid gravity: %s", parts[4])
-	//}
-	//
-	//po.enlarge = parts[5] != "0"
 
 	filenameParts := strings.Split(strings.Join(parts[6:], ""), ".")
 
@@ -85,6 +62,16 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 	if err != nil {
 		return "", po, errors.New("Invalid filename encoding")
 	}
+
+
+
+
+	z, err := base64.RawURLEncoding.DecodeString(filenameParts[0])
+	y, err := base64.RawURLEncoding.DecodeString(filenameParts[1])
+	log.Printf("z %s\n", z)
+	log.Printf("y %s\n", y)
+
+
 
 	return string(filename), po, nil
 }
@@ -190,7 +177,7 @@ func (h *httpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		panic(newError(404, err.Error(), "Invalid image url"))
 	}
 
-	b, imgtype, err := downloadImage(imgURL)
+	b, _, err := downloadImage(imgURL)
 	if err != nil {
 		panic(newError(404, err.Error(), "Image is unreachable"))
 	}

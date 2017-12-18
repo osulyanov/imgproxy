@@ -81,7 +81,8 @@ type config struct {
 	Quality         int
 	GZipCompression int
 
-	Key  []byte
+	PublicKey  []byte
+	SecretKey  []byte
 	Salt []byte
 
 	Secret string
@@ -101,7 +102,8 @@ var conf = config{
 }
 
 func init() {
-	keypath := flag.String("keypath", "", "path of the file with hex-encoded key")
+	publickeypath := flag.String("publickeypath", "", "path of the file with hex-encoded public key")
+	secretkeypath := flag.String("secretkeypath", "", "path of the file with hex-encoded secret key")
 	saltpath := flag.String("saltpath", "", "path of the file with hex-encoded salt")
 	flag.Parse()
 
@@ -124,16 +126,21 @@ func init() {
 	intEnvConfig(&conf.Quality, "IMGPROXY_QUALITY")
 	intEnvConfig(&conf.GZipCompression, "IMGPROXY_GZIP_COMPRESSION")
 
-	hexEnvConfig(&conf.Key, "IMGPROXY_KEY")
+	hexEnvConfig(&conf.PublicKey, "IMGPROXY_PUBLIC_KEY")
+	hexEnvConfig(&conf.SecretKey, "IMGPROXY_SECRET_KEY")
 	hexEnvConfig(&conf.Salt, "IMGPROXY_SALT")
 
-	hexFileConfig(&conf.Key, *keypath)
+	hexFileConfig(&conf.PublicKey, *publickeypath)
+	hexFileConfig(&conf.SecretKey, *secretkeypath)
 	hexFileConfig(&conf.Salt, *saltpath)
 
 	strEnvConfig(&conf.Secret, "IMGPROXY_SECRET")
 
-	if len(conf.Key) == 0 {
-		log.Fatalln("Key is not defined")
+	if len(conf.PublicKey) == 0 {
+		log.Fatalln("Public key is not defined")
+	}
+	if len(conf.SecretKey) == 0 {
+		log.Fatalln("Secret key is not defined")
 	}
 	if len(conf.Salt) == 0 {
 		log.Fatalln("Salt is not defined")

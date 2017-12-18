@@ -10,7 +10,6 @@ import "C"
 import (
 	"errors"
 	"log"
-	"math"
 	"os"
 	"runtime"
 	"unsafe"
@@ -69,11 +68,6 @@ var resizeTypes = map[string]resizeType{
 }
 
 type processingOptions struct {
-	resize  resizeType
-	width   int
-	height  int
-	gravity gravityType
-	enlarge bool
 	format  imageType
 }
 
@@ -131,13 +125,6 @@ func shutdownVips() {
 	C.vips_shutdown()
 }
 
-func randomAccessRequired(po processingOptions) int {
-	if po.gravity == SMART {
-		return 1
-	}
-	return 0
-}
-
 func round(f float64) int {
 	return int(f + .5)
 }
@@ -169,23 +156,6 @@ func extractMeta(img *C.VipsImage) (int, int, int, bool) {
 	return width, height, angle, flip
 }
 
-func calcScale(width, height int, po processingOptions) float64 {
-	if (po.width == width && po.height == height) || (po.resize != FILL && po.resize != FIT) {
-		return 1
-	}
-
-	fsw, fsh, fow, foh := float64(width), float64(height), float64(po.width), float64(po.height)
-
-	wr := fow / fsw
-	hr := foh / fsh
-
-	if po.resize == FIT {
-		return math.Min(wr, hr)
-	}
-
-	return math.Max(wr, hr)
-}
-
 func calcShink(scale float64, imgtype imageType) int {
 	shrink := int(1.0 / scale)
 
@@ -205,139 +175,15 @@ func calcShink(scale float64, imgtype imageType) int {
 	return 1
 }
 
-func calcCrop(width, height int, po processingOptions) (left, top int) {
-	left = (width - po.width + 1) / 2
-	top = (height - po.height + 1) / 2
-
-	if po.gravity == NORTH {
-		top = 0
-	}
-
-	if po.gravity == EAST {
-		left = width - po.width
-	}
-
-	if po.gravity == SOUTH {
-		top = height - po.height
-	}
-
-	if po.gravity == WEST {
-		left = 0
-	}
-
-	return
-}
-
 func processImage(data []byte, imgtype imageType, po processingOptions, t *timer) ([]byte, error) {
 	defer C.vips_cleanup()
 	defer keepAlive(data)
-
-	if po.gravity == SMART && !vipsSupportSmartcrop {
-		return nil, errors.New("Smart crop is not supported by used version of libvips")
-	}
 
 	img, err := vipsLoadImage(data, imgtype, 1)
 	if err != nil {
 		return nil, err
 	}
 	defer C.clear_image(&img)
-
-	t.Check()
-
-	imgWidth, imgHeight, angle, flip := extractMeta(img)
-
-	// Ensure we won't crop out of bounds
-	if !po.enlarge || po.resize == CROP {
-		if imgWidth < po.width {
-			po.width = imgWidth
-		}
-
-		if imgHeight < po.height {
-			po.height = imgHeight
-		}
-	}
-
-	if po.width != imgWidth || po.height != imgHeight {
-		if po.resize == FILL || po.resize == FIT {
-			scale := calcScale(imgWidth, imgHeight, po)
-
-			// Do some shrink-on-load
-			if scale < 1.0 {
-				if imgtype == JPEG || imgtype == WEBP {
-					shrink := calcShink(scale, imgtype)
-					scale = scale * float64(shrink)
-
-					if tmp, e := vipsLoadImage(data, imgtype, shrink); e == nil {
-						C.swap_and_clear(&img, tmp)
-					} else {
-						return nil, e
-					}
-				}
-			}
-
-			have_premultiplied := false
-			var bandFormat C.VipsBandFormat
-
-			if vipsImageHasAlpha(img) {
-				if bandFormat, err = vipsPremultiply(&img); err != nil {
-					return nil, err
-				}
-				have_premultiplied = true
-			}
-
-			if err = vipsResize(&img, scale); err != nil {
-				return nil, err
-			}
-
-			if have_premultiplied {
-				if err = vipsUnpremultiply(&img, bandFormat); err != nil {
-					return nil, err
-				}
-			}
-		}
-
-		if err = vipsFixColourspace(&img); err != nil {
-			return nil, err
-		}
-
-		t.Check()
-
-		if angle != C.VIPS_ANGLE_D0 || flip {
-			if err = vipsImageCopyMemory(&img); err != nil {
-				return nil, err
-			}
-
-			if angle != C.VIPS_ANGLE_D0 {
-				if err = vipsRotate(&img, angle); err != nil {
-					return nil, err
-				}
-			}
-
-			if flip {
-				if err = vipsFlip(&img); err != nil {
-					return nil, err
-				}
-			}
-		}
-
-		t.Check()
-
-		if po.resize == FILL || po.resize == CROP {
-			if po.gravity == SMART {
-				if err = vipsImageCopyMemory(&img); err != nil {
-					return nil, err
-				}
-				if err = vipsSmartCrop(&img, po.width, po.height); err != nil {
-					return nil, err
-				}
-			} else {
-				left, top := calcCrop(int(img.Xsize), int(img.Ysize), po)
-				if err = vipsCrop(&img, left, top, po.width, po.height); err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
 
 	t.Check()
 

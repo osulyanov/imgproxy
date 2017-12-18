@@ -1,20 +1,18 @@
 require "openssl"
 require "base64"
 
+puts "public_key=#{ENV['IMGPROXY_PUBLIC_KEY']}"
+puts "secret_key=#{ENV['IMGPROXY_SECRET_KEY']}"
+puts "salt=#{ENV['IMGPROXY_SALT']}"
+
 public_key = [ENV['IMGPROXY_PUBLIC_KEY']].pack("H*")
-puts "public_key=#{public_key}"
-
 secret_key = [ENV['IMGPROXY_SECRET_KEY']].pack("H*")
-puts "secret_key=#{secret_key}"
-
 salt = [ENV['IMGPROXY_SALT']].pack("H*")
-puts "salt=#{salt}"
 
-
-base_url = ARGV[0] # https://domain.com/tile/client_id
+base_url = ARGV[0] # http://mapwarper.net/maps/tile/26645/
 puts "base_url=#{base_url}"
 
-tile_path = ARGV[1] # /0/0/0.png
+tile_path = ARGV[1] # 4/0/0/0.png
 puts "tile_path=#{tile_path}"
 
 digest = OpenSSL::Digest.new("sha256")

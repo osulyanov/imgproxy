@@ -44,7 +44,7 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 		return "", po, err
 	}
 
-	filenameParts := strings.Split(strings.Join(parts[6:], ""), ".")
+	filenameParts := strings.Split(strings.Join(parts[2:], ""), ".")
 
 	if len(filenameParts) < 2 {
 		po.format = imageTypes["jpg"]
@@ -58,20 +58,20 @@ func parsePath(r *http.Request) (string, processingOptions, error) {
 		return "", po, errors.New("Resulting image type not supported")
 	}
 
-	filename, err := base64.RawURLEncoding.DecodeString(filenameParts[0])
+	tile_name, err := base64.RawURLEncoding.DecodeString(filenameParts[0])
 	if err != nil {
 		return "", po, errors.New("Invalid filename encoding")
 	}
 
 
+	path_parts := strings.Split(strings.TrimPrefix(string(tile_name), "/"), "/")
 
+	tile_path := strings.Join(path_parts[4:], "/")
 
-	z, err := base64.RawURLEncoding.DecodeString(filenameParts[0])
-	y, err := base64.RawURLEncoding.DecodeString(filenameParts[1])
-	log.Printf("z %s\n", z)
-	log.Printf("y %s\n", y)
+	domain_signed :=  strings.Join(path_parts[:4], "")
+	domain, err := base64.RawURLEncoding.DecodeString(domain_signed)
 
-
+	filename := strings.Join( []string{string(domain), string(tile_path)}, "/")
 
 	return string(filename), po, nil
 }
